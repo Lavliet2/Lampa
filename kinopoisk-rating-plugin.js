@@ -10,7 +10,7 @@
  * - Получает РЕАЛЬНЫЕ рейтинги с API Кинопоиска
  * - Кэширует в памяти и localStorage устройства
  * - Лимит: 500 запросов в сутки
- * - Fallback: случайный рейтинг (только при ошибке API)
+ * - Fallback: 0.1 (только при ошибке API)
  * - НЕ использует TMDB рейтинги
  * - Очистка кэша: старше 3 месяцев
  * - Проверка каждые 5 секунд
@@ -153,11 +153,11 @@
             
             // Функция для fallback данных (только когда API недоступен)
             function useMockRating(movieTitle) {
-                // Генерируем случайный рейтинг как fallback
-                var kinopoiskRating = (Math.random() * 3 + 6).toFixed(1);
-                var votes = Math.floor(Math.random() * 200000 + 50000);
+                // Показываем 0.1 если не нашли рейтинг
+                var kinopoiskRating = '0.1';
+                var votes = 0;
                 
-                console.log('📊 Fallback рейтинг (случайный):', movieTitle, kinopoiskRating);
+                console.log('📊 Fallback рейтинг (0.1):', movieTitle, kinopoiskRating);
                 updateRatingDisplay(kinopoiskRating, votes, movieTitle);
                 console.log('🎭 Fallback рейтинг (не с Кинопоиска):', movieTitle, kinopoiskRating, votes);
             }
