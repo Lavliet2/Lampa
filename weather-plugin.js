@@ -1,3 +1,8 @@
+/**
+ * Плагин погоды для Lampa
+ * Показывает текущую погоду в интерфейсе приложения
+ */
+
 (function () {
     'use strict';
     
@@ -16,7 +21,7 @@
             var lat = position.coords.latitude;
             var lon = position.coords.longitude;
             var API_KEY = "46a5d8546cc340f69d9123207242801";
-			var url = 'http://api.weatherapi.com/v1/current.json?key=46a5d8546cc340f69d9123207242801&q=' +  lat + ',' + lon + '&lang=ru&aqi=no';
+            var url = 'http://api.weatherapi.com/v1/current.json?key=46a5d8546cc340f69d9123207242801&q=' +  lat + ',' + lon + '&lang=ru&aqi=no';
 
             network.clear();
             network.timeout(5000);
@@ -27,9 +32,9 @@
             var data1 = result.location;
             var data2 = result.current;
             var temp = Math.floor(data2.temp_c); // Температура
-				console.log("Погода", "Температура: " + temp)
+            console.log("Погода", "Температура: " + temp)
             var condition = data2.condition.text;// Обстановка
-				console.log("Погода", "Обстановка: " + condition)
+            console.log("Погода", "Обстановка: " + condition)
 
             $('#weather-temp').text(temp + '°');
             $('#weather-condition').text(condition).toggleClass('long-text', condition.length > 10);
@@ -50,7 +55,7 @@
                     }
                 };
                 console.log("Погода", "Долгота: " + position.coords.latitude + ", " + "Широта: " + position.coords.longitude)
-				this.getWeatherData(position);
+                this.getWeatherData(position);
             }
                 .bind(this));
         };
@@ -81,37 +86,37 @@
     var isTimeVisible = true;
 
     $(document).ready(function () {
-	setTimeout(function(){
-        // Создаем интерфейс погоды
-        weatherInterface.create();
-        var weatherWidget = weatherInterface.render();
-        $('.head__time').after(weatherWidget);
+        setTimeout(function(){
+            // Создаем интерфейс погоды
+            weatherInterface.create();
+            var weatherWidget = weatherInterface.render();
+            $('.head__time').after(weatherWidget);
 
-        // Функция для переключения между отображением времени и виджета погоды
-        function toggleDisplay() {
-            if (isTimeVisible) {
-                $('.head__time').hide();
-                $('.weather-widget').show();
-            } else {
-                $('.head__time').show();
-                $('.weather-widget').hide();
+            // Функция для переключения между отображением времени и виджета погоды
+            function toggleDisplay() {
+                if (isTimeVisible) {
+                    $('.head__time').hide();
+                    $('.weather-widget').show();
+                } else {
+                    $('.head__time').show();
+                    $('.weather-widget').hide();
+                }
+                isTimeVisible = !isTimeVisible;
             }
-            isTimeVisible = !isTimeVisible;
-        }
 
-        // Устанавливаем интервал для переключения между временем и погодой каждые 10 секунд
-        setInterval(toggleDisplay, 10000);
+            // Устанавливаем интервал для переключения между временем и погодой каждые 10 секунд
+            setInterval(toggleDisplay, 10000);
 
-        // Получаем начальные данные о погоде
-        weatherInterface.getWeather();
+            // Получаем начальные данные о погоде
+            weatherInterface.getWeather();
 
-        // Скрываем виджет погоды при загрузке страницы
-        $('.weather-widget').hide();
-		var width_element = document.querySelector('.head__time');
-		console.log(width_element.offsetWidth);
-		$('.weather-widget').css('width', width_element.offsetWidth + 'px');
-		$('.head__time').css('width', width_element.offsetWidth + 'px');
-    },5000)
-	});
-	
+            // Скрываем виджет погоды при загрузке страницы
+            $('.weather-widget').hide();
+            var width_element = document.querySelector('.head__time');
+            console.log(width_element.offsetWidth);
+            $('.weather-widget').css('width', width_element.offsetWidth + 'px');
+            $('.head__time').css('width', width_element.offsetWidth + 'px');
+        },5000)
+    });
+    
 })();
