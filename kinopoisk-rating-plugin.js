@@ -40,51 +40,60 @@
                 console.log('Рейтинг Кинопоиска:', movieTitle, foundRating.rating, foundRating.votes);
             }
 
-            // Безопасное обновление отображения рейтинга
+            // Безопасное обновление отображения рейтинга на обложках
             function updateRatingDisplay(rating, votes, filmName) {
-                // Создаем красивый рейтинг Кинопоиска
+                // Создаем красивый рейтинг Кинопоиска для обложек
                 var kinopoiskRating = $('<div class="kinopoisk-rating-safe" style="' +
-                    'display: inline-flex; ' +
-                    'align-items: center; ' +
+                    'position: absolute; ' +
+                    'bottom: 8px; ' +
+                    'right: 8px; ' +
                     'background: linear-gradient(135deg, #ff6b35, #f7931e); ' +
                     'color: white; ' +
-                    'padding: 6px 12px; ' +
-                    'border-radius: 8px; ' +
+                    'padding: 4px 8px; ' +
+                    'border-radius: 6px; ' +
                     'font-weight: bold; ' +
-                    'font-size: 14px; ' +
-                    'margin: 4px; ' +
-                    'box-shadow: 0 2px 8px rgba(255, 107, 53, 0.4);' +
-                    'position: relative;' +
+                    'font-size: 12px; ' +
+                    'box-shadow: 0 2px 6px rgba(255, 107, 53, 0.5);' +
                     'z-index: 10;' +
+                    'display: flex; ' +
+                    'align-items: center; ' +
                     '">' +
-                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" style="margin-right: 6px; fill: currentColor;">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" style="margin-right: 4px; fill: currentColor;">' +
                     '<path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.46,13.97L5.82,21L12,17.27Z"/>' +
                     '</svg>' +
-                    '<span style="font-weight: bold;">КП: ' + rating + '</span>' +
-                    '<span style="font-size: 11px; margin-left: 6px; opacity: 0.9;">(' + votes + ')</span>' +
+                    '<span style="font-weight: bold;">' + rating + '</span>' +
                     '</div>');
                 
-                // Добавляем рейтинг в безопасные места
+                // Добавляем рейтинг на карточки фильмов
                 setTimeout(function() {
-                    $('.full__info, .card__info').append(kinopoiskRating);
+                    $('.card').each(function() {
+                        var card = $(this);
+                        if (!card.find('.kinopoisk-rating-safe').length) {
+                            card.css('position', 'relative');
+                            card.append(kinopoiskRating.clone());
+                        }
+                    });
                 }, 500);
             }
 
-            // Мягкое скрытие TMDB рейтингов
+            // Мягкое скрытие TMDB рейтингов на обложках
             function hideTMDBRatings() {
-                // Скрываем только конкретные элементы с рейтингами
-                $('.tmdb-rating, .imdb-rating').hide();
+                // Скрываем рейтинги на карточках фильмов
+                $('.card__rating, .card .rating, .card [class*="rating"]').hide();
                 
-                // Ищем элементы с рейтингами и скрываем их аккуратно
-                $('div').each(function() {
+                // Скрываем числовые рейтинги на обложках
+                $('.card').find('*').each(function() {
                     var element = $(this);
                     var text = element.text().trim();
                     
-                    // Скрываем только если это явно рейтинг
-                    if (text.match(/^\d+\.\d+\s*(TMDB|IMDB)$/i)) {
+                    // Скрываем элементы с рейтингами типа "7.0", "6.5" и т.д.
+                    if (text.match(/^\d+\.\d+$/) && text.length <= 4) {
                         element.hide();
                     }
                 });
+                
+                // Скрываем рейтинги TMDB/IMDB
+                $('.tmdb-rating, .imdb-rating, [class*="tmdb"], [class*="imdb"]').hide();
             }
 
             // Функция для поиска рейтинга по фильму
@@ -99,6 +108,21 @@
                     }
                 }
             }
+
+            // Слушаем события загрузки карточек фильмов (главное меню)
+            Lampa.Listener.follow('card', function (e) {
+                if (e.type == 'complite') {
+                    // Скрываем TMDB рейтинги на обложках
+                    setTimeout(function() {
+                        hideTMDBRatings();
+                    }, 500);
+                    
+                    // Добавляем рейтинг Кинопоиска на обложки
+                    setTimeout(function() {
+                        searchKinopoiskRating(e.data);
+                    }, 1000);
+                }
+            });
 
             // Слушаем события загрузки фильмов
             Lampa.Listener.follow('full', function (e) {
