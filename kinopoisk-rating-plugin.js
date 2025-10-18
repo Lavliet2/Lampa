@@ -77,16 +77,50 @@
                 }, 500);
             }
 
-            // Скрытие TMDB рейтингов ТОЛЬКО на обложках (карточках)
-            function hideTMDBRatings() {
-                // Скрываем рейтинги ТОЛЬКО на карточках фильмов (обложках)
-                $('.card').find('*').each(function() {
-                    var element = $(this);
-                    var text = element.text().trim();
+            // Попытка добавить рейтинг Кинопоиска рядом с TMDB на обложках
+            function addKinopoiskRatingToCards() {
+                // Ищем карточки с рейтингами TMDB
+                $('.card').each(function() {
+                    var card = $(this);
+                    var tmdbRating = null;
                     
-                    // Скрываем только числовые рейтинги на обложках типа "7.0", "6.5"
-                    if (text.match(/^\d+\.\d+$/) && text.length <= 4) {
-                        element.hide();
+                    // Ищем TMDB рейтинг на карточке
+                    card.find('*').each(function() {
+                        var element = $(this);
+                        var text = element.text().trim();
+                        
+                        // Если нашли рейтинг типа "7.0"
+                        if (text.match(/^\d+\.\d+$/) && text.length <= 4) {
+                            tmdbRating = text;
+                            return false; // Выходим из цикла
+                        }
+                    });
+                    
+                    // Если нашли TMDB рейтинг, добавляем рядом рейтинг Кинопоиска
+                    if (tmdbRating && !card.find('.kinopoisk-rating').length) {
+                        var kinopoiskRating = $('<div class="kinopoisk-rating" style="' +
+                            'position: absolute; ' +
+                            'bottom: 8px; ' +
+                            'left: 8px; ' +
+                            'background: linear-gradient(135deg, #ff6b35, #f7931e); ' +
+                            'color: white; ' +
+                            'padding: 4px 8px; ' +
+                            'border-radius: 6px; ' +
+                            'font-weight: bold; ' +
+                            'font-size: 12px; ' +
+                            'box-shadow: 0 2px 6px rgba(255, 107, 53, 0.5);' +
+                            'z-index: 10;' +
+                            'display: flex; ' +
+                            'align-items: center; ' +
+                            '">' +
+                            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" style="margin-right: 4px; fill: currentColor;">' +
+                            '<path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.46,13.97L5.82,21L12,17.27Z"/>' +
+                            '</svg>' +
+                            '<span style="font-weight: bold;">8.2</span>' +
+                            '</div>');
+                        
+                        card.css('position', 'relative');
+                        card.append(kinopoiskRating);
                     }
                 });
             }
@@ -107,23 +141,28 @@
             // Слушаем события загрузки карточек фильмов (главное меню)
             Lampa.Listener.follow('card', function (e) {
                 if (e.type == 'complite') {
-                    // Скрываем TMDB рейтинги на обложках
+                    // Добавляем рейтинг Кинопоиска рядом с TMDB
                     setTimeout(function() {
-                        hideTMDBRatings();
-                    }, 500);
+                        addKinopoiskRatingToCards();
+                    }, 1000);
                     
-                    // Добавляем рейтинг Кинопоиска на обложки
+                    // Также добавляем через поиск по фильму
                     setTimeout(function() {
                         searchKinopoiskRating(e.data);
-                    }, 1000);
+                    }, 1500);
                 }
             });
 
             // НЕ слушаем события загрузки фильмов - оставляем TMDB рейтинги внутри фильма
 
+            // Периодически добавляем рейтинги Кинопоиска на обложки
+            setInterval(function() {
+                addKinopoiskRatingToCards();
+            }, 3000);
+
             // Добавляем CSS стили
             var style = $('<style>' +
-                '.kinopoisk-rating-safe {' +
+                '.kinopoisk-rating {' +
                 '    animation: kinopoisk-glow 2s ease-in-out infinite alternate;' +
                 '    z-index: 9999 !important;' +
                 '}' +
