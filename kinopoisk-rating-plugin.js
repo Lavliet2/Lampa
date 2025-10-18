@@ -8,7 +8,7 @@
     'use strict';
 
     function startPlugin() {
-        window.plugin_kinopoisk_safe_ready = true;
+        window.plugin_kinopoisk_rating_ready = true;
 
         function add() {
             // Функция для получения рейтинга (моковые данные)
@@ -77,27 +77,15 @@
                 }, 500);
             }
 
-            // Попытка добавить рейтинг Кинопоиска рядом с TMDB на обложках
+            // Добавление рейтинга Кинопоиска на все карточки
             function addKinopoiskRatingToCards() {
-                // Ищем карточки с рейтингами TMDB
+                console.log('Добавление рейтингов Кинопоиска на карточки...');
+                
                 $('.card').each(function() {
                     var card = $(this);
-                    var tmdbRating = null;
                     
-                    // Ищем TMDB рейтинг на карточке
-                    card.find('*').each(function() {
-                        var element = $(this);
-                        var text = element.text().trim();
-                        
-                        // Если нашли рейтинг типа "7.0"
-                        if (text.match(/^\d+\.\d+$/) && text.length <= 4) {
-                            tmdbRating = text;
-                            return false; // Выходим из цикла
-                        }
-                    });
-                    
-                    // Если нашли TMDB рейтинг, добавляем рядом рейтинг Кинопоиска
-                    if (tmdbRating && !card.find('.kinopoisk-rating').length) {
+                    // Проверяем, есть ли уже рейтинг Кинопоиска
+                    if (!card.find('.kinopoisk-rating').length) {
                         var kinopoiskRating = $('<div class="kinopoisk-rating" style="' +
                             'position: absolute; ' +
                             'bottom: 8px; ' +
@@ -121,6 +109,7 @@
                         
                         card.css('position', 'relative');
                         card.append(kinopoiskRating);
+                        console.log('Добавлен рейтинг Кинопоиска на карточку');
                     }
                 });
             }
@@ -158,7 +147,12 @@
             // Периодически добавляем рейтинги Кинопоиска на обложки
             setInterval(function() {
                 addKinopoiskRatingToCards();
-            }, 3000);
+            }, 2000);
+            
+            // Также добавляем сразу при загрузке
+            setTimeout(function() {
+                addKinopoiskRatingToCards();
+            }, 2000);
 
             // Добавляем CSS стили
             var style = $('<style>' +
@@ -189,7 +183,7 @@
     }
 
     // Проверка на дублирование и запуск
-    if (!window.plugin_kinopoisk_safe_ready) {
+    if (!window.plugin_kinopoisk_rating_ready) {
         startPlugin();
     }
 
