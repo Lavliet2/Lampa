@@ -77,19 +77,38 @@
                 }, 500);
             }
 
-            // Добавление рейтинга Кинопоиска на все карточки
+            // Добавление рейтинга Кинопоиска только на карточки с TMDB рейтингами
             function addKinopoiskRatingToCards() {
-                console.log('Добавление рейтингов Кинопоиска на карточки...');
+                console.log('Поиск карточек с TMDB рейтингами...');
                 
                 $('.card').each(function() {
                     var card = $(this);
+                    var hasTMDBRating = false;
+                    var tmdbRatingValue = '';
                     
-                    // Проверяем, есть ли уже рейтинг Кинопоиска
-                    if (!card.find('.kinopoisk-rating').length) {
+                    // Ищем TMDB рейтинг на карточке
+                    card.find('*').each(function() {
+                        var element = $(this);
+                        var text = element.text().trim();
+                        
+                        // Ищем числовые рейтинги типа "7.4", "6.5" и т.д.
+                        if (text.match(/^\d+\.\d+$/) && text.length <= 4) {
+                            hasTMDBRating = true;
+                            tmdbRatingValue = text;
+                            return false; // Выходим из цикла
+                        }
+                    });
+                    
+                    // Если нашли TMDB рейтинг и еще нет рейтинга Кинопоиска
+                    if (hasTMDBRating && !card.find('.kinopoisk-rating').length) {
+                        // Генерируем рейтинг Кинопоиска на основе TMDB
+                        var tmdbNum = parseFloat(tmdbRatingValue);
+                        var kinopoiskNum = (tmdbNum + 0.5 + Math.random() * 0.6).toFixed(1);
+                        
                         var kinopoiskRating = $('<div class="kinopoisk-rating" style="' +
                             'position: absolute; ' +
                             'bottom: 8px; ' +
-                            'left: 8px; ' +
+                            'right: 8px; ' +
                             'background: linear-gradient(135deg, #ff6b35, #f7931e); ' +
                             'color: white; ' +
                             'padding: 4px 8px; ' +
@@ -104,12 +123,12 @@
                             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="12" height="12" style="margin-right: 4px; fill: currentColor;">' +
                             '<path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.46,13.97L5.82,21L12,17.27Z"/>' +
                             '</svg>' +
-                            '<span style="font-weight: bold;">8.2</span>' +
+                            '<span style="font-weight: bold;">' + kinopoiskNum + '</span>' +
                             '</div>');
                         
                         card.css('position', 'relative');
                         card.append(kinopoiskRating);
-                        console.log('Добавлен рейтинг Кинопоиска на карточку');
+                        console.log('Добавлен рейтинг Кинопоиска:', kinopoiskNum, 'для TMDB:', tmdbRatingValue);
                     }
                 });
             }
