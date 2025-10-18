@@ -1,55 +1,117 @@
-/**
- * Ультра-простой плагин для Lampa
- * Минимальный код без сложных конструкций
- */
-
 (function () {
     'use strict';
+    
+    function WeatherInterface() {
+        var html;
+        var network = new Lampa.Reguest();
 
-    // Проверяем на дублирование
-    if (window.plugin_ultra_simple_ready) {
-        return;
-    }
+        this.create = function () {
+            html = $('<div class="weather-widget">' +
+                    '<div class="weather-temp" id="weather-temp"> </div>' +
+                    '<div class="weather-condition" id="weather-condition"></div>' +
+                    '</div>');
+        };
 
-    window.plugin_ultra_simple_ready = true;
+        this.getWeatherData = function (position) {
+            var lat = position.coords.latitude;
+            var lon = position.coords.longitude;
+            var API_KEY = "46a5d8546cc340f69d9123207242801";
+			var url = 'http://api.weatherapi.com/v1/current.json?key=46a5d8546cc340f69d9123207242801&q=' +  lat + ',' + lon + '&lang=ru&aqi=no';
 
-    // Ждем готовности Lampa
-    function waitForLampa() {
-        if (typeof Lampa !== 'undefined' && Lampa.Listener) {
-            initPlugin();
-        } else {
-            setTimeout(waitForLampa, 100);
+            network.clear();
+            network.timeout(5000);
+            network.silent(url, processWeatherData, processError);
+        };
+
+        function processWeatherData(result) {
+            var data1 = result.location;
+            var data2 = result.current;
+            var temp = Math.floor(data2.temp_c); // Температура
+				console.log("Погода", "Температура: " + temp)
+            var condition = data2.condition.text;// Обстановка
+				console.log("Погода", "Обстановка: " + condition)
+
+            $('#weather-temp').text(temp + '°');
+            $('#weather-condition').text(condition).toggleClass('long-text', condition.length > 10);
         }
-    }
 
-    function initPlugin() {
-        // Простая функция для тестирования
-        function testFunction() {
-            if (Lampa.Noty) {
-                Lampa.Noty.show('Ультра-простой плагин работает!');
+        function processError() {
+            console.log('Error retrieving weather data');
+        }
+
+        this.getWeatherByIP = function () {
+            $.get("http://ip-api.com/json", function (locationData) {
+                console.log("Погода", "Город: " + locationData.city);
+                var coords = locationData.lat + ',' + locationData.lon;
+                var position = {
+                    coords: {
+                        latitude: parseFloat(locationData.lat),
+                        longitude: parseFloat(locationData.lon)
+                    }
+                };
+                console.log("Погода", "Долгота: " + position.coords.latitude + ", " + "Широта: " + position.coords.longitude)
+				this.getWeatherData(position);
+            }
+                .bind(this));
+        };
+
+        this.getWeather = function () {
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    this.getWeatherData.bind(this),
+                    this.getWeatherByIP.bind(this));
             } else {
-                alert('Ультра-простой плагин работает!');
+                this.getWeatherByIP();
             }
-        }
+        };
 
-        // Добавление кнопки в интерфейс
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type == 'complite') {
-                var button = '<div class="full-start__button view--ultra"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24px" height="24px"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M11,16.5L18,9.5L16.5,8L11,13.5L7.5,10L6,11.5L11,16.5Z" fill="currentColor"/></svg><span>Ультра</span></div>';
-                
-                var btn = $(button);
-                btn.on('hover:enter', function () {
-                    testFunction();
-                });
-                
-                if (e.data && e.object) {
-                    e.object.activity.render().find('.view--ultra').last().after(btn);
-                }
+        this.render = function () {
+            return html;
+        };
+
+        this.destroy = function () {
+            if (html) {
+                html.remove();
+                html = null;
             }
-        });
+        };
     }
 
-    // Запускаем ожидание Lampa
-    waitForLampa();
+    var weatherInterface = new WeatherInterface();
+    var isTimeVisible = true;
 
+    $(document).ready(function () {
+	setTimeout(function(){
+        // Создаем интерфейс погоды
+        weatherInterface.create();
+        var weatherWidget = weatherInterface.render();
+        $('.head__time').after(weatherWidget);
+
+        // Функция для переключения между отображением времени и виджета погоды
+        function toggleDisplay() {
+            if (isTimeVisible) {
+                $('.head__time').hide();
+                $('.weather-widget').show();
+            } else {
+                $('.head__time').show();
+                $('.weather-widget').hide();
+            }
+            isTimeVisible = !isTimeVisible;
+        }
+
+        // Устанавливаем интервал для переключения между временем и погодой каждые 10 секунд
+        setInterval(toggleDisplay, 10000);
+
+        // Получаем начальные данные о погоде
+        weatherInterface.getWeather();
+
+        // Скрываем виджет погоды при загрузке страницы
+        $('.weather-widget').hide();
+		var width_element = document.querySelector('.head__time');
+		console.log(width_element.offsetWidth);
+		$('.weather-widget').css('width', width_element.offsetWidth + 'px');
+		$('.head__time').css('width', width_element.offsetWidth + 'px');
+    },5000)
+	});
+	
 })();
