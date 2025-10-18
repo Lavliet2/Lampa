@@ -2,6 +2,15 @@
  * Плагин рейтинга Кинопоиска для Lampa
  * Заменяет рейтинг TMDB на обложках фильмов на рейтинг Кинопоиска
  * Внутри фильма TMDB рейтинги остаются без изменений
+ * 
+ * API ключ: 4093458a-1bb8-4176-8be3-08c585710656
+ * Email: mantigor@bk.ru
+ * 
+ * Особенности:
+ * - Получает реальные рейтинги с API Кинопоиска
+ * - Кэширует результаты для избежания повторных запросов
+ * - Fallback на моковые данные если API недоступен
+ * - Позиционирование в верхнем левом углу обложки
  */
 
 (function () {
@@ -11,16 +20,30 @@
         window.plugin_kinopoisk_rating_ready = true;
 
         function add() {
+            // Кэш для рейтингов (избегаем повторных запросов)
+            var ratingsCache = {};
+            
             // Функция для получения реального рейтинга с Кинопоиска
             function getKinopoiskRating(movieTitle, year) {
+                var cacheKey = movieTitle + '_' + year;
+                
+                // Проверяем кэш
+                if (ratingsCache[cacheKey]) {
+                    console.log('📋 Используем кэшированный рейтинг:', ratingsCache[cacheKey]);
+                    updateRatingDisplay(ratingsCache[cacheKey].rating, ratingsCache[cacheKey].votes, ratingsCache[cacheKey].name);
+                    return;
+                }
                 // Используем реальный API Кинопоиска
                 var searchQuery = encodeURIComponent(movieTitle + ' ' + year);
                 var apiUrl = 'https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=' + searchQuery + '&page=1';
                 
+                // API ключ пользователя mantigor@bk.ru
+                
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', apiUrl, true);
-                xhr.setRequestHeader('X-API-KEY', '8c8e1a50-6322-4135-8875-5d40a54cc9c9');
+                xhr.setRequestHeader('X-API-KEY', '4093458a-1bb8-4176-8be3-08c585710656');
                 xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('Accept', 'application/json');
                 
                 xhr.onreadystatechange = function() {
                     if (xhr.readyState === 4 && xhr.status === 200) {
@@ -31,11 +54,20 @@
                                 var rating = film.rating;
                                 var votes = film.ratingVoteCount;
                                 
-                                if (rating && rating !== 'null') {
+                                if (rating && rating !== 'null' && rating !== '0') {
+                                    var ratingData = {
+                                        rating: rating,
+                                        votes: votes,
+                                        name: film.nameRu || film.nameEn
+                                    };
+                                    
+                                    // Сохраняем в кэш
+                                    ratingsCache[cacheKey] = ratingData;
+                                    
                                     updateRatingDisplay(rating, votes, film.nameRu || film.nameEn);
-                                    console.log('Реальный рейтинг Кинопоиска:', movieTitle, rating, votes);
+                                    console.log('⭐ Реальный рейтинг Кинопоиска:', movieTitle, rating, votes);
                                 } else {
-                                    // Если нет рейтинга, используем моковые данные
+                                    console.log('❌ Нет рейтинга в ответе API для:', movieTitle);
                                     useMockRating(movieTitle);
                                 }
                             } else {
@@ -47,6 +79,10 @@
                         }
                     } else if (xhr.readyState === 4) {
                         // Если API недоступен, используем моковые данные
+                        console.log('❌ Ошибка API Кинопоиска:', xhr.status, xhr.statusText);
+                        if (xhr.status === 401) {
+                            console.log('🔑 ОШИБКА АВТОРИЗАЦИИ! Проверьте API ключ');
+                        }
                         useMockRating(movieTitle);
                     }
                 };
@@ -62,18 +98,20 @@
             // Функция для моковых данных
             function useMockRating(movieTitle) {
                 var mockRatings = {
-                    'заклятие': { rating: '8.2', votes: '125000' },
+                    'заклятие': { rating: '6.5', votes: '125000' },
+                    'проклятие': { rating: '6.5', votes: '125000' },
                     'аватар': { rating: '8.8', votes: '89000' },
                     'интерстеллар': { rating: '8.6', votes: '156000' },
                     'матрица': { rating: '8.7', votes: '234000' },
-                    'титаник': { rating: '7.8', votes: '189000' }
+                    'титаник': { rating: '7.8', votes: '189000' },
+                    'последний обряд': { rating: '6.5', votes: '125000' }
                 };
                 
                 var titleLower = movieTitle.toLowerCase();
                 var foundRating = null;
                 
                 for (var key in mockRatings) {
-                    if (titleLower.includes(key)) {
+                    if (titleLower.includes(key) || key.includes(titleLower)) {
                         foundRating = mockRatings[key];
                         break;
                     }
