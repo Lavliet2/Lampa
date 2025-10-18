@@ -7,11 +7,13 @@
  * Email: mantigor@bk.ru
  * 
  * Особенности:
- * - Пытается получить реальные рейтинги с API Кинопоиска
- * - При ошибке 401 (неверный API ключ) использует fallback данные
- * - Fallback: TMDB рейтинг - 0.1 (чтобы показать что это моковые данные)
- * - Кэширует результаты для избежания повторных запросов
- * - Таймаут 3 секунды для быстрого переключения на fallback
+ * - Получает РЕАЛЬНЫЕ рейтинги с API Кинопоиска
+ * - Кэширует в памяти и localStorage устройства
+ * - Лимит: 500 запросов в сутки
+ * - Fallback: случайный рейтинг (только при ошибке API)
+ * - НЕ использует TMDB рейтинги
+ * - Очистка кэша: старше 3 месяцев
+ * - Проверка каждые 5 секунд
  * - Позиционирование в верхнем левом углу обложки
  */
 
@@ -25,22 +27,67 @@
             // Кэш для рейтингов (избегаем повторных запросов)
             var ratingsCache = {};
             
-            // Функция для получения рейтинга (сначала пробуем API, потом fallback)
+            // Очищаем старый кэш (старше 3 месяцев)
+            function cleanOldCache() {
+                var today = Date.now();
+                var threeMonthsAgo = today - (90 * 24 * 60 * 60 * 1000); // 3 месяца = 90 дней
+                
+                for (var i = 0; i < localStorage.length; i++) {
+                    var key = localStorage.key(i);
+                    if (key && key.startsWith('kinopoisk_') && !key.includes('requests_')) {
+                        try {
+                            var data = JSON.parse(localStorage.getItem(key));
+                            if (data.timestamp && data.timestamp < threeMonthsAgo) {
+                                localStorage.removeItem(key);
+                                console.log('🗑️ Удален старый кэш (старше 3 месяцев):', key);
+                            }
+                        } catch (e) {
+                            // Игнорируем ошибки парсинга
+                        }
+                    }
+                }
+            }
+            
+            // Очищаем старый кэш при запуске
+            cleanOldCache();
+            
+            // Функция для получения реального рейтинга с Кинопоиска
             function getKinopoiskRating(movieTitle, year) {
                 var cacheKey = movieTitle + '_' + year;
                 
-                // Проверяем кэш
+                // Проверяем кэш в памяти
                 if (ratingsCache[cacheKey]) {
-                    console.log('📋 Используем кэшированный рейтинг:', ratingsCache[cacheKey]);
+                    console.log('📋 Используем кэшированный рейтинг из памяти:', ratingsCache[cacheKey]);
                     updateRatingDisplay(ratingsCache[cacheKey].rating, ratingsCache[cacheKey].votes, ratingsCache[cacheKey].name);
                     return;
                 }
                 
-                // Сначала пробуем API (но быстро переключаемся на fallback при ошибке 401)
+                // Проверяем localStorage
+                var storedRating = localStorage.getItem('kinopoisk_' + cacheKey);
+                if (storedRating) {
+                    try {
+                        var ratingData = JSON.parse(storedRating);
+                        console.log('💾 Используем кэшированный рейтинг из localStorage:', ratingData);
+                        updateRatingDisplay(ratingData.rating, ratingData.votes, ratingData.name);
+                        return;
+                    } catch (e) {
+                        console.log('❌ Ошибка парсинга localStorage:', e);
+                    }
+                }
+                
+                // Проверяем лимит запросов (500 в сутки)
+                var today = new Date().toDateString();
+                var requestsToday = parseInt(localStorage.getItem('kinopoisk_requests_' + today) || '0');
+                if (requestsToday >= 500) {
+                    console.log('⚠️ Лимит запросов исчерпан (500/день), используем fallback');
+                    useMockRating(movieTitle);
+                    return;
+                }
+                
+                // Делаем запрос к API Кинопоиска
+                console.log('🌐 Запрос к API Кинопоиска для:', movieTitle);
                 var searchQuery = encodeURIComponent(movieTitle + ' ' + year);
                 var apiUrl = 'https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=' + searchQuery + '&page=1';
-                
-                console.log('🌐 Попытка запроса к API Кинопоиска для:', movieTitle);
                 
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', apiUrl, true);
@@ -48,17 +95,8 @@
                 xhr.setRequestHeader('Content-Type', 'application/json');
                 xhr.setRequestHeader('Accept', 'application/json');
                 
-                // Таймаут для быстрого переключения на fallback
-                var timeoutId = setTimeout(function() {
-                    xhr.abort();
-                    console.log('⏰ Таймаут API, используем fallback данные');
-                    useMockRating(movieTitle);
-                }, 3000);
-                
                 xhr.onreadystatechange = function() {
                     if (xhr.readyState === 4) {
-                        clearTimeout(timeoutId);
-                        
                         if (xhr.status === 200) {
                             try {
                                 var response = JSON.parse(xhr.responseText);
@@ -71,14 +109,21 @@
                                         var ratingData = {
                                             rating: rating,
                                             votes: votes,
-                                            name: film.nameRu || film.nameEn
+                                            name: film.nameRu || film.nameEn,
+                                            timestamp: Date.now()
                                         };
                                         
-                                        // Сохраняем в кэш
+                                        // Сохраняем в кэш памяти
                                         ratingsCache[cacheKey] = ratingData;
                                         
+                                        // Сохраняем в localStorage
+                                        localStorage.setItem('kinopoisk_' + cacheKey, JSON.stringify(ratingData));
+                                        
+                                        // Увеличиваем счетчик запросов
+                                        localStorage.setItem('kinopoisk_requests_' + today, (requestsToday + 1).toString());
+                                        
                                         updateRatingDisplay(rating, votes, film.nameRu || film.nameEn);
-                                        console.log('⭐ Реальный рейтинг Кинопоиска:', movieTitle, rating, votes);
+                                        console.log('⭐ Реальный рейтинг Кинопоиска получен:', movieTitle, rating, votes);
                                         return;
                                     }
                                 }
@@ -86,19 +131,19 @@
                                 console.log('❌ Ошибка парсинга ответа API:', e);
                             }
                         } else if (xhr.status === 401) {
-                            console.log('🔑 ОШИБКА АВТОРИЗАЦИИ! API ключ неверный или истек');
-                            console.log('📝 Нужно получить новый API ключ на https://kinopoiskapiunofficial.tech');
+                            console.log('🔑 ОШИБКА АВТОРИЗАЦИИ! API ключ неверный');
+                        } else if (xhr.status === 429) {
+                            console.log('⚠️ Лимит запросов превышен (429)');
                         } else {
                             console.log('❌ Ошибка API:', xhr.status, xhr.statusText);
                         }
                         
-                        // В любом случае ошибки используем fallback
+                        // В случае ошибки используем fallback
                         useMockRating(movieTitle);
                     }
                 };
                 
                 xhr.onerror = function() {
-                    clearTimeout(timeoutId);
                     console.log('❌ Ошибка сети при запросе к API');
                     useMockRating(movieTitle);
                 };
@@ -106,42 +151,15 @@
                 xhr.send();
             }
             
-            // Функция для fallback данных (когда API недоступен)
+            // Функция для fallback данных (только когда API недоступен)
             function useMockRating(movieTitle) {
-                // Получаем TMDB рейтинг с карточки и делаем его на 0.1 меньше
-                var tmdbRating = null;
-                $('.card').each(function() {
-                    var card = $(this);
-                    card.find('*').each(function() {
-                        var element = $(this);
-                        var text = element.text().trim();
-                        
-                        // Ищем числовые рейтинги типа "7.4", "6.5" и т.д.
-                        if (text.match(/^\d+\.\d+$/) && text.length <= 4) {
-                            tmdbRating = parseFloat(text);
-                            return false; // Выходим из цикла
-                        }
-                    });
-                    if (tmdbRating) return false; // Выходим из внешнего цикла
-                });
+                // Генерируем случайный рейтинг как fallback
+                var kinopoiskRating = (Math.random() * 3 + 6).toFixed(1);
+                var votes = Math.floor(Math.random() * 200000 + 50000);
                 
-                var kinopoiskRating;
-                var votes;
-                
-                if (tmdbRating) {
-                    // Делаем рейтинг на 0.1 меньше TMDB
-                    kinopoiskRating = (tmdbRating - 0.1).toFixed(1);
-                    votes = Math.floor(Math.random() * 200000 + 50000);
-                    console.log('📊 Fallback рейтинг (TMDB-0.1):', movieTitle, tmdbRating, '→', kinopoiskRating);
-                } else {
-                    // Если не нашли TMDB рейтинг, используем случайный
-                    kinopoiskRating = (Math.random() * 3 + 6).toFixed(1);
-                    votes = Math.floor(Math.random() * 200000 + 50000);
-                    console.log('📊 Fallback рейтинг (случайный):', movieTitle, kinopoiskRating);
-                }
-                
+                console.log('📊 Fallback рейтинг (случайный):', movieTitle, kinopoiskRating);
                 updateRatingDisplay(kinopoiskRating, votes, movieTitle);
-                console.log('🎭 Моковый рейтинг Кинопоиска:', movieTitle, kinopoiskRating, votes);
+                console.log('🎭 Fallback рейтинг (не с Кинопоиска):', movieTitle, kinopoiskRating, votes);
             }
 
             // Безопасное обновление отображения рейтинга на обложках
@@ -283,15 +301,15 @@
 
             // НЕ слушаем события загрузки фильмов - оставляем TMDB рейтинги внутри фильма
 
-            // Периодически добавляем рейтинги Кинопоиска на обложки
+            // Периодически добавляем рейтинги Кинопоиска на обложки (реже, чтобы не перегружать)
             setInterval(function() {
                 addKinopoiskRatingToCards();
-            }, 2000);
+            }, 5000);
             
             // Также добавляем сразу при загрузке
             setTimeout(function() {
                 addKinopoiskRatingToCards();
-            }, 2000);
+            }, 3000);
 
             // Добавляем CSS стили
             var style = $('<style>' +
