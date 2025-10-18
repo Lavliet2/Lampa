@@ -30,14 +30,15 @@
   - Градиентный дизайн с тенью
 - **GitHub Pages**: `https://lavliet2.github.io/Lampa/love-button-plugin.js`
 
-### 4. Плагин рейтинга Кинопоиска (`kinopoisk-rating-plugin.js`) ⭐
-- **Функции**: Заменяет рейтинг TMDB на рейтинг с сайта Кинопоиск
+### 4. Плагин рейтинга Кинопоиска (`kinopoisk-rating-safe.js`) ⭐
+- **Функции**: Безопасно заменяет рейтинг TMDB на рейтинг Кинопоиска
 - **Особенности**:
-  - Автоматический поиск фильмов на Кинопоиске
+  - Мягкое скрытие TMDB рейтингов без блокировки приложения
   - Отображение рейтинга и количества голосов
   - Красивый дизайн с градиентом и анимацией
   - Работает для фильмов и сериалов
-- **GitHub Pages**: `https://lavliet2.github.io/Lampa/kinopoisk-rating-plugin.js`
+  - Безопасная версия без агрессивного скрытия элементов
+- **GitHub Pages**: `https://lavliet2.github.io/Lampa/kinopoisk-rating-safe.js`
 
 ## Как использовать
 
@@ -47,7 +48,7 @@
    - Погода: `https://lavliet2.github.io/Lampa/weather-plugin.js`
    - Заметки: `https://lavliet2.github.io/Lampa/notes-plugin.js`
    - Кнопка любви: `https://lavliet2.github.io/Lampa/love-button-plugin.js`
-   - Рейтинг Кинопоиска: `https://lavliet2.github.io/Lampa/kinopoisk-rating-plugin.js`
+   - Рейтинг Кинопоиска: `https://lavliet2.github.io/Lampa/kinopoisk-rating-safe.js`
 3. Сохраните настройки
 4. Перезагрузите Lampa
 
