@@ -3,8 +3,8 @@
  * Заменяет рейтинг TMDB на обложках фильмов на рейтинг Кинопоиска
  * Внутри фильма TMDB рейтинги остаются без изменений
  * 
- * API ключ: 4093458a-1bb8-4176-8be3-08c585710656
- * Email: mantigor@bk.ru
+ * API ключ: W8MH17J-1KP4DFN-KFPG9JZ-8GZYGBN
+ * API: https://api.kinopoisk.dev
  * 
  * Особенности:
  * - Получает РЕАЛЬНЫЕ рейтинги с API Кинопоиска
@@ -86,13 +86,12 @@
                 
                 // Делаем запрос к API Кинопоиска
                 console.log('🌐 Запрос к API Кинопоиска для:', movieTitle);
-                var searchQuery = encodeURIComponent(movieTitle + ' ' + year);
-                var apiUrl = 'https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword?keyword=' + searchQuery + '&page=1';
+                var searchQuery = encodeURIComponent(movieTitle);
+                var apiUrl = 'https://api.kinopoisk.dev/v1.4/movie/search?query=' + searchQuery + '&page=1&limit=1';
                 
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', apiUrl, true);
-                xhr.setRequestHeader('X-API-KEY', '4093458a-1bb8-4176-8be3-08c585710656');
-                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('X-API-KEY', 'W8MH17J-1KP4DFN-KFPG9JZ-8GZYGBN');
                 xhr.setRequestHeader('Accept', 'application/json');
                 
                 xhr.onreadystatechange = function() {
